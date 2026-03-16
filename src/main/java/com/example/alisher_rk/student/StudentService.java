@@ -1,5 +1,6 @@
 package com.example.alisher_rk.student;
 
+import com.example.alisher_rk.audit.AuditLogService;
 import com.example.alisher_rk.exception.BadRequestException;
 import com.example.alisher_rk.exception.NotFoundException;
 import com.example.alisher_rk.student.dto.StudentCreateDto;
@@ -19,9 +20,12 @@ public class StudentService {
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
 
-    public StudentService(StudentRepository studentRepository, TeacherRepository teacherRepository) {
+    private final AuditLogService auditLogService;
+
+    public StudentService(StudentRepository studentRepository, TeacherRepository teacherRepository, AuditLogService auditLogService) {
         this.studentRepository = studentRepository;
         this.teacherRepository = teacherRepository;
+        this.auditLogService = auditLogService;
     }
 
     public StudentResponseDto create(StudentCreateDto dto) {
@@ -35,7 +39,8 @@ public class StudentService {
                     .orElseThrow(() -> new NotFoundException("Teacher not found: " + dto.teacherId()));
             s.setTeacher(t);
         }
-
+        Student saved = studentRepository.save(s);
+        auditLogService.log("CREATE", "Student", String.valueOf(saved.getId()));
         return toDto(studentRepository.save(s));
     }
 
@@ -79,6 +84,7 @@ public class StudentService {
         Student s = studentRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Student not found: " + id));
         studentRepository.delete(s);
+        auditLogService.log("DELETE", "Student", String.valueOf(id));
     }
 
     private StudentResponseDto toDto(Student s) {
